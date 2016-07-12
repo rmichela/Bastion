@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "A CRDT-based forum for IPFS",
   "main": "index.js",
-  "scripts": {
-    "test": "mocha"
-  },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/rmichela/bastion.git"
@@ -20,9 +17,19 @@
   },
   "homepage": "https://github.com/rmichela/bastion#readme",
   "dependencies": {
+    "tslint": "^3.13.0",
     "typescript": "^1.8.10"
   },
   "devDependencies": {
+    "chai": "^3.5.0",
     "mocha": "^2.5.3"
+  },
+  "scripts": {
+    "clean": "rm -rf out",
+    "tsc": "tsc",
+    "tsc:w": "tsc -w",
+    "lint": "tslint 'src/**/*.ts'",
+    "pretest": "npm run clean && npm run tsc",
+    "test": "npm run lint && mocha out/test/**/*.js"
   }
 }

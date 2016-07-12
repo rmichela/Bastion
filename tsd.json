@@ -1,0 +1,18 @@
+{
+  "version": "v4",
+  "repo": "borisyankov/DefinitelyTyped",
+  "ref": "master",
+  "path": "typings",
+  "bundle": "typings/tsd.d.ts",
+  "installed": {
+    "mocha/mocha.d.ts": {
+      "commit": "de82425735f84a10b43921ae4b1d085b3752a626"
+    },
+    "chai/chai.d.ts": {
+      "commit": "de82425735f84a10b43921ae4b1d085b3752a626"
+    },
+    "assertion-error/assertion-error.d.ts": {
+      "commit": "de82425735f84a10b43921ae4b1d085b3752a626"
+    }
+  }
+}
