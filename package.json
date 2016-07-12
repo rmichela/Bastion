@@ -25,11 +25,13 @@
     "mocha": "^2.5.3"
   },
   "scripts": {
-    "clean": "rm -rf out",
+    "clean": "rm -rf bin",
     "tsc": "tsc",
     "tsc:w": "tsc -w",
     "lint": "tslint 'src/**/*.ts'",
     "pretest": "npm run clean && npm run tsc",
-    "test": "npm run lint && mocha out/test/**/*.js"
+    "test": "npm run lint && mocha bin/test/**/*.js",
+    "prebuild": "npm run clean",
+    "build": "npm run tsc"
   }
 }
