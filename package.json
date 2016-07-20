@@ -18,7 +18,8 @@
   "homepage": "https://github.com/rmichela/bastion#readme",
   "dependencies": {
     "tslint": "^3.13.0",
-    "typescript": "^1.8.10"
+    "typescript": "^1.8.10",
+    "typescript-collections": "^1.1.2"
   },
   "devDependencies": {
     "chai": "^3.5.0",
@@ -30,7 +31,7 @@
     "tsc:w": "tsc -w",
     "lint": "tslint 'src/**/*.ts'",
     "pretest": "npm run clean && npm run tsc",
-    "test": "npm run lint && mocha bin/test/**/*.js",
+    "test": "mocha bin/test/**/*.js",
     "prebuild": "npm run clean",
     "build": "npm run tsc"
   }
