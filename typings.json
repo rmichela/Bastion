@@ -1,0 +1,11 @@
+{
+  "name": "bastion",
+  "globalDependencies": {
+    "assertion-error": "github:DefinitelyTyped/DefinitelyTyped/assertion-error/assertion-error.d.ts#de82425735f84a10b43921ae4b1d085b3752a626",
+    "chai": "github:DefinitelyTyped/DefinitelyTyped/chai/chai.d.ts#de82425735f84a10b43921ae4b1d085b3752a626",
+    "mocha": "github:DefinitelyTyped/DefinitelyTyped/mocha/mocha.d.ts#de82425735f84a10b43921ae4b1d085b3752a626"
+  },
+  "globalDevDependencies": {
+    "object-hash": "registry:dt/object-hash#0.5.0+20160317120654"
+  }
+}

@@ -1,4 +1,4 @@
-/// <reference path="../typings/mocha/mocha.d.ts" />
+/// <reference path="../typings/globals/mocha/index.d.ts" />
 import { ChronoTree, Node, Hash, Storage, NodeType } from '../src/chronoTree';
 import { TestStorage } from './testStorage';
 import { expect } from 'chai';
