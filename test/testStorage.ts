@@ -1,12 +1,17 @@
 import { Storage, Hash, Node } from '../src/chronoTree';
+import * as h from 'object-hash';
 
 export class TestStorage implements Storage {
     private _knownNodes: Node[] = [];
 
     public save(node: Node): Hash {
-        // todo: implement a hashing algorithm
+        // clear the node hash, so it isn't included in the new hash
+        node.hash = '';
+        let hash: string = h.sha1(node);
+        console.log('Saving ' + hash);
+
         this._knownNodes.push(node);
-        return 'not-a-hash';
+        return hash;
     }
 
     public delete(node: Hash): void {
@@ -23,4 +28,8 @@ export class TestStorage implements Storage {
 
         throw new Error('Cannot find node hash ' + hash);
     }
+}
+
+export class TestNode extends Node {
+    public content: String;
 }

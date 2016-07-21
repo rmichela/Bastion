@@ -6,9 +6,7 @@ export enum NodeType {
     Content,
     // aggregate nodes tie up the loose ends of a ChronoTree and are discarded
     // as soon as they are no longer relevent.
-    Aggregate,
-    // not yet set
-    Undefined
+    Aggregate
 }
 
 // the type for a node hash
@@ -21,7 +19,7 @@ export abstract class Node {
     // the unique identifier for this node
     public hash: Hash = Node.HASH_NOT_SET;
     // the "flavor" of this node
-    public type: NodeType = NodeType.Undefined;
+    public type: NodeType = NodeType.Content;
     // the unique identifier of this node's logical parent
     public parent: Hash = Node.HASH_NOT_SET;
     // the unique identifiers of the loose ends that came before this node
@@ -68,6 +66,13 @@ export class ChronoTree {
     }
 
     /**
+     * Gets the current loose ends of this ChronoTree.
+     */
+    public get looseEnds(): Hash[] {
+        return this._looseEnds.toArray();
+    }
+
+    /**
      * Get a node by hash from this ChronoTree.
      */
     public getNode(hash: Hash): Node {
@@ -83,7 +88,11 @@ export class ChronoTree {
         let bitterEndNode: Node = this._knownNodes.getValue(this._bitterEnd);
 
         if (bitterEndNode.type === NodeType.Content) {
-            newNode.predecessors.push(bitterEndNode.hash);
+            if (bitterEndNode.hash !== newNode.parent) {
+                // don't add the current bitter end as the new node's predecessor if
+                // the new node is already pointing to the current bitter end as a parent
+                newNode.predecessors.push(bitterEndNode.hash);
+            }
         }
 
         if (bitterEndNode.type === NodeType.Aggregate) {

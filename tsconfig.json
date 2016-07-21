@@ -9,6 +9,12 @@
     "removeComments": false,
     "noImplicitAny": false,
     "pretty": true,
-    "outDir": "bin"
-  }
+    "outDir": "bin",
+    "listFiles": true
+  },
+  "filesGlob": [
+	    "./src/**/*.ts",
+      "./test/**/*.ts",
+      "typings/index.d.ts"
+    ]
 }
