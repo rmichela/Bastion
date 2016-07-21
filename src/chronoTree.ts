@@ -6,7 +6,9 @@ export enum NodeType {
     Content,
     // aggregate nodes tie up the loose ends of a ChronoTree and are discarded
     // as soon as they are no longer relevent.
-    Aggregate
+    Aggregate,
+    // not yet set
+    Undefined
 }
 
 // the type for a node hash
@@ -14,15 +16,17 @@ export type Hash = string;
 
 // the base node type for a ChronoTree
 export abstract class Node {
+    public static get HASH_NOT_SET(): Hash { return 'HASH_NOT_SET'; }
+
     // the unique identifier for this node
-    public hash: Hash;
+    public hash: Hash = Node.HASH_NOT_SET;
     // the "flavor" of this node
-    public type: NodeType;
+    public type: NodeType = NodeType.Undefined;
     // the unique identifier of this node's logical parent
-    public parent: Hash;
+    public parent: Hash = Node.HASH_NOT_SET;
     // the unique identifiers of the loose ends that came before this node
     // cronologically
-    public predecessors: Hash[];
+    public predecessors: Hash[] = [];
 }
 
 // abstracts the underlying complexities of storing nodes.
@@ -44,7 +48,6 @@ export class ChronoTree {
 
     constructor(storage: Storage, head: Hash = null) {
         this._storage = storage;
-        this._bitterEnd = head;
 
         if (head === null) {
             // populate an empty tree with an empty aggregate node
@@ -52,6 +55,8 @@ export class ChronoTree {
             emptyTreeNode.hash = this._storage.save(emptyTreeNode);
             head = emptyTreeNode.hash;
         }
+        this._bitterEnd = head;
+
         this.mergeImpl(head, true);
     }
 
@@ -104,7 +109,7 @@ export class ChronoTree {
         let todo: Collections.Queue<Hash> = new Collections.Queue<Hash>();
         todo.add(other);
 
-        while (!todo.isEmpty) {
+        while (!todo.isEmpty()) {
             let hash: Hash = todo.dequeue();
 
             // process this node only if it hasn't been seen before
@@ -117,7 +122,7 @@ export class ChronoTree {
                 this._looseEnds.add(hash);
 
                 // account for the parent node, if it exists
-                if (node.parent) {
+                if (node.parent !== Node.HASH_NOT_SET) {
                     todo.enqueue(node.parent);
                     this._looseEnds.remove(node.parent);
                 }
@@ -133,7 +138,9 @@ export class ChronoTree {
         if (initializing) {
             // compute the loose ends from the initial bitter end
             let bitterEndNode: Node = this._knownNodes.getValue(this._bitterEnd);
-            this._looseEnds.add(bitterEndNode.parent);
+            if (bitterEndNode.parent !== Node.HASH_NOT_SET) {
+                this._looseEnds.add(bitterEndNode.parent);
+            }
             for (let predecessor of bitterEndNode.predecessors) {
                 this._looseEnds.add(predecessor);
             }
