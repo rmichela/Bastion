@@ -7,7 +7,7 @@ export class TestStorage implements Storage {
     public save(node: TestNode): Hash {
         // clear the node hash, so it isn't included in the new hash
         node.hash = '';
-        let hash: string = this.computeHash(node) + ((node.content) ? ' ' + node.content : '');
+        let hash: string = this.computeHash(node);
         console.log('Saving   ' + hash);
 
         this._knownNodes.push(node);
@@ -40,6 +40,9 @@ export class TestStorage implements Storage {
                 hash += (p.substr(0, 6) + ' ');
             }
             hash += ']';
+        }
+        if (node.content) {
+            hash += (' "' + node.content + '"');
         }
         return hash;
     }

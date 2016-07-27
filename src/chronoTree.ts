@@ -27,6 +27,10 @@ export abstract class Node {
     public predecessors: Hash[] = [];
 }
 
+export interface NodeMap {
+    [key: string]: Node;
+}
+
 // abstracts the underlying complexities of storing nodes.
 export interface Storage {
     // persist a Node, generating it's persistence-specific hash
@@ -69,14 +73,19 @@ export class ChronoTree {
      * Gets the current loose ends of this ChronoTree.
      */
     public get looseEnds(): Hash[] {
-        return this._looseEnds.toArray();
+        return this._looseEnds.toArray().sort();
     }
 
     /**
      * Gets all the known nodes for this ChronoTree.
      */
-    public get knownNodes(): Node[] {
-        return this._knownNodes.values();
+    public get knownNodes(): NodeMap {
+        let nodes: Node[] =  this._knownNodes.values().sort((a: Node, b: Node) => Collections.util.defaultCompare(a.hash, b.hash));
+        let nodeMap: NodeMap = {};
+        for (let node of nodes) {
+            nodeMap[node.hash] = node;
+        }
+        return nodeMap;
     }
 
     /**
@@ -181,13 +190,14 @@ export class ChronoTree {
         let oldBitterEnd: Hash = this._bitterEnd;
         this._bitterEnd = newBitterEndNode.hash;
 
-        this._looseEnds.remove(oldBitterEnd);
-        this._looseEnds.add(newBitterEndNode.hash);
-
         let oldBitterEndNode: Node = this.getNode(oldBitterEnd);
         if (oldBitterEndNode.type === NodeType.Aggregate) {
             this._storage.delete(oldBitterEnd);
             this._knownNodes.remove(oldBitterEnd);
+        }
+        if (newBitterEndNode.type === NodeType.Content) {
+            this._looseEnds.remove(oldBitterEnd);
+            this._looseEnds.add(newBitterEndNode.hash);
         }
     }
 }

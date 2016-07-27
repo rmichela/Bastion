@@ -46,7 +46,7 @@ describe('ChronoTree', () => {
 
             expect(tree.bitterEnd).to.equal(firstNode.hash);
             expect(tree.looseEnds.length).to.equal(1);
-            expect(tree.knownNodes.length).to.equal(1);
+            expect(Object.keys(tree.knownNodes).length).to.equal(1);
         });
 
         it('should accept another node', () => {
@@ -65,7 +65,7 @@ describe('ChronoTree', () => {
             expect(tree.looseEnds.length).to.equal(1);
             expect(tree.getNode(tree.bitterEnd).type).to.equal(NodeType.Content);
             expect(tree.getNode(tree.bitterEnd).parent).to.equal(firstNode.hash);
-            expect(tree.knownNodes.length).to.equal(2);
+            expect(Object.keys(tree.knownNodes).length).to.equal(2);
         });
     });
 
@@ -102,10 +102,10 @@ describe('ChronoTree', () => {
             expect(mergeNode.predecessors).to.contain(rhsNode.hash);
         });
 
-        it.only('should merge a simple three way split', () => {
+        it('should merge a simple three way split', () => {
             // create the root node
             let firstNode: TestNode = new TestNode();
-            firstNode.content = 'First post!';
+            firstNode.content = 'xxx';
             firstNode.hash = _storage.save(firstNode);
 
             // create the three divergent trees
@@ -144,6 +144,11 @@ describe('ChronoTree', () => {
             // verify ends are the same
             expect(aTree.bitterEnd).to.equal(bTree.bitterEnd);
             expect(bTree.bitterEnd).to.equal(cTree.bitterEnd);
+            // verify internal state is the same
+            expect(h.sha1(aTree.looseEnds)).to.equal(h.sha1(bTree.looseEnds));
+            expect(h.sha1(aTree.knownNodes)).to.equal(h.sha1(bTree.knownNodes));
+            expect(h.sha1(bTree.looseEnds)).to.equal(h.sha1(cTree.looseEnds));
+            expect(h.sha1(bTree.knownNodes)).to.equal(h.sha1(cTree.knownNodes));
         });
     });
 });
