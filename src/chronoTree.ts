@@ -186,16 +186,19 @@ export class ChronoTree {
     }
 
     private replaceBitterEnd(newBitterEndNode: Node): void {
+        // replace the current bitter end hash with the new bitter end hash
         newBitterEndNode.hash = this._storage.save(newBitterEndNode);
         let oldBitterEnd: Hash = this._bitterEnd;
         this._bitterEnd = newBitterEndNode.hash;
 
         let oldBitterEndNode: Node = this.getNode(oldBitterEnd);
         if (oldBitterEndNode.type === NodeType.Aggregate) {
+            // purge the obsolete aggregate node
             this._storage.delete(oldBitterEnd);
             this._knownNodes.remove(oldBitterEnd);
         }
         if (newBitterEndNode.type === NodeType.Content) {
+            // purge the obsolete loose end
             this._looseEnds.remove(oldBitterEnd);
             this._looseEnds.add(newBitterEndNode.hash);
         }
