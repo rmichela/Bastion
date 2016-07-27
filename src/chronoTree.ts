@@ -27,9 +27,15 @@ export abstract class Node {
     public predecessors: Hash[] = [];
 }
 
+// the type for a dictionary of Nodes
 export interface NodeMap {
     [key: string]: Node;
 }
+
+// the type for a partial ordering of nodes
+export type PartialOrder = Node[][];
+// the type for a total ordering of nodes
+export type TotalOrder = Node[];
 
 // abstracts the underlying complexities of storing nodes.
 export interface Storage {
@@ -39,6 +45,11 @@ export interface Storage {
     delete(node: Hash): void;
     // find a Node by its hash
     find(hash: Hash): Node;
+}
+
+// abstracts the details of implementing a total order w/r/t the node type
+export interface TotalOrdering {
+    totalOrder(partial: PartialOrder): TotalOrder;
 }
 
 // the ChronoTree itself
@@ -132,6 +143,14 @@ export class ChronoTree {
     public merge(other: Hash): ChronoTree {
         this.mergeImpl(other, false);
         return this;
+    }
+
+    /**
+     * Returns a partial ordering of this ChronoTree in toplogical sort order,
+     * newest to oldest. Ambiguously ordered nodes are grouped in a sub-array.
+     */
+    public get partialOrdering(): PartialOrder {
+        return null;
     }
 
     private mergeImpl(other: Hash, initializing: boolean): void {
