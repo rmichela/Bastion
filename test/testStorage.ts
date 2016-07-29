@@ -15,6 +15,7 @@ export class TestStorage implements Storage {
     }
 
     public delete(node: Hash): void {
+        // deleting from storage doesn't make a node unknown
         console.log('Deleting ' + node);
     }
 

@@ -100,6 +100,13 @@ export class ChronoTree {
     }
 
     /**
+     * Get the Storage used by this ChronoTree.
+     */
+    public get storage(): Storage {
+        return this._storage;
+    }
+
+    /**
      * Get a node by hash from this ChronoTree.
      */
     public getNode(hash: Hash): Node {
@@ -114,25 +121,27 @@ export class ChronoTree {
      * Add a new node to this ChronoTree.
      */
     public add(newNode: Node): ChronoTree {
-        // copy all the hashes tracked by the bitter end into the new
-        // node's predecessors list
-        let bitterEndNode: Node = this._knownNodes.getValue(this._bitterEnd);
+        if (!this._knownNodes.containsKey(newNode.hash)) {
+            // copy all the hashes tracked by the bitter end into the new
+            // node's predecessors list
+            let bitterEndNode: Node = this._knownNodes.getValue(this._bitterEnd);
 
-        if (bitterEndNode.type === NodeType.Content) {
-            if (bitterEndNode.hash !== newNode.parent) {
-                // don't add the current bitter end to the new node's predecessors if
-                // the new node is already pointing to the current bitter end as a parent
-                newNode.predecessors.push(bitterEndNode.hash);
+            if (bitterEndNode.type === NodeType.Content) {
+                if (bitterEndNode.hash !== newNode.parent) {
+                    // don't add the current bitter end to the new node's predecessors if
+                    // the new node is already pointing to the current bitter end as a parent
+                    newNode.predecessors.push(bitterEndNode.hash);
+                }
             }
-        }
 
-        if (bitterEndNode.type === NodeType.Aggregate) {
-            newNode.predecessors = bitterEndNode.predecessors;
-        }
+            if (bitterEndNode.type === NodeType.Aggregate) {
+                newNode.predecessors = bitterEndNode.predecessors;
+            }
 
-        // replace the bitter end with a node pointing only to the new node
-        this.replaceBitterEnd(newNode);
-        this._knownNodes.setValue(newNode.hash, newNode);
+            // replace the bitter end with a node pointing only to the new node
+            this.replaceBitterEnd(newNode);
+            this._knownNodes.setValue(newNode.hash, newNode);
+        }
 
         return this;
     }
@@ -156,6 +165,11 @@ export class ChronoTree {
     private mergeImpl(other: Hash, initializing: boolean): void {
         // todo: 1. any kind of validation of each of the nodes being merged
         //       2. make this method atomic
+
+        // if we already know about a node, we don't have to merge it again
+        if (this._knownNodes.containsKey(other)) {
+            return;
+        }
 
         let todo: Collections.Queue<Hash> = new Collections.Queue<Hash>();
         todo.add(other);

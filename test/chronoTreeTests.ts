@@ -102,6 +102,31 @@ describe('ChronoTree', () => {
             expect(mergeNode.predecessors).to.contain(rhsNode.hash);
         });
 
+        it('should be idempotent', () => {
+            // create the root node
+            let firstNode: TestNode = new TestNode();
+            firstNode.content = 'xxx';
+            firstNode.hash = _storage.save(firstNode);
+
+            // create the two divergent trees
+            let aTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+            let bTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+
+            // add divergent nodes
+            let aNode: TestNode = new TestNode();
+            aNode.content = 'aaa';
+            aNode.parent = firstNode.hash;
+            aTree.add(aNode);
+
+            // merge a->b twice
+            bTree.merge(aTree.bitterEnd);
+            let h1: Hash = bTree.bitterEnd;
+            // expect(h1).to.equal(aTree.bitterEnd);
+            bTree.merge(aTree.bitterEnd);
+            let h2: Hash = bTree.bitterEnd;
+            expect(h2).to.equal(h1);
+        });
+
         it('should merge a simple three way split', () => {
             // create the root node
             let firstNode: TestNode = new TestNode();
