@@ -66,13 +66,13 @@ export class ChronoTree {
 
         if (!head) {
             // populate an empty tree with an empty aggregate node
-            let emptyTreeNode: Node = new BitterEndNode();
+            let emptyTreeNode: Node = new BitterEndNode([]);
             emptyTreeNode.hash = this._storage.save(emptyTreeNode, this._name);
             head = emptyTreeNode.hash;
         }
         this._bitterEnd = head;
 
-        this.mergeImpl(head, true);
+        this.init(head);
     }
 
     /**
@@ -130,27 +130,17 @@ export class ChronoTree {
      * Add a new node to this ChronoTree.
      */
     public add(newNode: Node): ChronoTree {
-        if (!this._knownNodes.containsKey(newNode.hash)) {
-            // copy all the hashes tracked by the bitter end into the new
-            // node's predecessors list
-            let bitterEndNode: Node = this._knownNodes.getValue(this._bitterEnd);
-
-            if (bitterEndNode.type === NodeType.Content) {
-                if (bitterEndNode.hash !== newNode.parent) {
-                    // don't add the current bitter end to the new node's predecessors if
-                    // the new node is already pointing to the current bitter end as a parent
-                    newNode.predecessors.push(bitterEndNode.hash);
-                }
-            }
-
-            if (bitterEndNode.type === NodeType.Aggregate) {
-                newNode.predecessors = bitterEndNode.predecessors;
-            }
-
-            // replace the bitter end with a node pointing only to the new node
-            this.replaceBitterEnd(newNode);
-            this._knownNodes.setValue(newNode.hash, newNode);
-        }
+        // store the new node
+        let newHash: Hash = this._storage.save(newNode, this._name);
+        newNode.hash = newHash;
+        // add new node to known nodes
+        this._knownNodes.setValue(newHash, newNode);
+        // update the loose ends
+        this._looseEnds.add(newHash);
+        this._looseEnds.remove(newNode.parent);
+        // create a new bitter end
+        let be: BitterEndNode = new BitterEndNode(this._looseEnds.toArray());
+        this.replaceBitterEnd(be);
 
         return this;
     }
@@ -159,7 +149,18 @@ export class ChronoTree {
      * Merge one ChronoTree with the bitter end of another ChronoTree.
      */
     public merge(other: Hash): ChronoTree {
-        this.mergeImpl(other, false);
+        let otherNode: Node = this._storage.find(other, this._name);
+        // update known nodes
+        this.traverseUnknownNodes(otherNode).toArray().forEach(n => {
+            this._knownNodes.setValue(n.hash, n);
+        });
+        // update loose ends
+        this._looseEnds.add(other);
+        this._looseEnds.remove(otherNode.parent);
+        // update bitter end
+        let be: BitterEndNode = new BitterEndNode(this._looseEnds.toArray());
+        this.replaceBitterEnd(be);
+
         return this;
     }
 
@@ -176,92 +177,67 @@ export class ChronoTree {
         console.log('Loose ends: ' + this.looseEnds);
     }
 
-    private mergeImpl(other: Hash, initializing: boolean): void {
-        // todo: 1. any kind of validation of each of the nodes being merged
-        //       2. make this method atomic
-
-        // if we already know about a node, we don't have to merge it again
-        if (this._knownNodes.containsKey(other)) {
-            return;
-        }
-
-        let todo: Collections.Queue<Hash> = new Collections.Queue<Hash>();
-        todo.add(other);
-
-        while (!todo.isEmpty()) {
-            let hash: Hash = todo.dequeue();
-
-            // process this node only if it hasn't been seen before
-            if (!this._knownNodes.containsKey(hash)) {
-                let node: Node = this._storage.find(hash, this._name);
-                this._knownNodes.setValue(hash, node);
-
-                // assume this node is a loose end, for now
-                // loose ends are removed as new nodes point to them
-                this._looseEnds.add(hash);
-
-                // account for the parent node, if it exists
-                if (node.parent !== Node.HASH_NOT_SET) {
-                    todo.enqueue(node.parent);
-                    this._looseEnds.remove(node.parent);
-                }
-
-                // account for the predecessors, if they exist
-                for (let predecessor of node.predecessors) {
-                    todo.enqueue(predecessor);
-                    this._looseEnds.remove(predecessor);
-                }
-            }
-        }
-
-        if (initializing) {
-            // compute the loose ends from the initial bitter end
-            let bitterEndNode: Node = this._knownNodes.getValue(this._bitterEnd);
-            if (bitterEndNode.parent !== Node.HASH_NOT_SET) {
-                this._looseEnds.add(bitterEndNode.parent);
-            }
-            for (let predecessor of bitterEndNode.predecessors.sort()) {
-                this._looseEnds.add(predecessor);
-            }
+    private init(other: Hash): void {
+        let otherNode: Node = this._storage.find(other);
+        // initialize know nodes
+        this.traverseUnknownNodes(otherNode).toArray().forEach(n => {
+            this._knownNodes.setValue(n.hash, n);
+        });
+        // initialize loose ends
+        otherNode.predecessors.forEach(n => {
+            this._looseEnds.add(n);
+        });
+        // initialize bitter end
+        if (otherNode.type === NodeType.Aggregate) {
+            this.replaceBitterEnd(otherNode);
         } else {
-            // replace the bitter end with a new aggregate node
-            let newBitterEndNode: Node;
-            if (this._looseEnds.size() === 1) {
-                newBitterEndNode = this._storage.find(this._looseEnds.toArray()[0], this._name);
-            } else {
-                newBitterEndNode = new BitterEndNode();
-                newBitterEndNode.predecessors = this._looseEnds.toArray().sort();
-            }
-
-            this.replaceBitterEnd(newBitterEndNode);
-            this._knownNodes.setValue(newBitterEndNode.hash, newBitterEndNode);
+            let be: BitterEndNode = new BitterEndNode([other]);
+            this.replaceBitterEnd(be);
         }
+    }
+
+    private traverseUnknownNodes(node: Node): Collections.Set<Node> {
+        let nodes: Collections.Set<Node> = new Collections.Set<Node>(n => n.hash);
+
+        // only travers unknown nodes
+        if (!this._knownNodes.containsKey(node.hash)) {
+            // include this node
+            nodes.add(node);
+            // include this node's parent and descendents
+            if (node.parent !== Node.HASH_NOT_SET) {
+                let parentNode: Node = this._storage.find(node.parent, this._name);
+                nodes.union(this.traverseUnknownNodes(parentNode));
+            }
+            // include this node's predacessors and descendents
+            for (let pHash of node.predecessors) {
+                let p: Node = this._storage.find(pHash, this._name);
+                nodes.union(this.traverseUnknownNodes(p));
+            }
+        }
+
+        return nodes;
     }
 
     private replaceBitterEnd(newBitterEndNode: Node): void {
         // replace the current bitter end hash with the new bitter end hash
         newBitterEndNode.hash = this._storage.save(newBitterEndNode, this._name);
+        this._knownNodes.setValue(newBitterEndNode.hash, newBitterEndNode);
         let oldBitterEnd: Hash = this._bitterEnd;
         this._bitterEnd = newBitterEndNode.hash;
 
-        let oldBitterEndNode: Node = this.getNode(oldBitterEnd);
-        if (oldBitterEndNode.type === NodeType.Aggregate) {
-            // purge the obsolete aggregate node
+        // purge the obsolete aggregate node, if it exists
+        if (oldBitterEnd) {
             this._storage.delete(oldBitterEnd, this._name);
             this._knownNodes.remove(oldBitterEnd);
-        }
-        if (newBitterEndNode.type === NodeType.Content) {
-            // purge the obsolete loose end
-            this._looseEnds.remove(oldBitterEnd);
-            this._looseEnds.add(newBitterEndNode.hash);
         }
     }
 }
 
 // content-free node type used for tracking the bitter end of a Chrono Tree
 class BitterEndNode extends Node {
-    constructor() {
+    constructor(looseEnds: Hash[]) {
         super();
+        this.predecessors = looseEnds;
         this.type = NodeType.Aggregate;
     }
 }

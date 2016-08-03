@@ -5,7 +5,7 @@ import { RNG } from './rng';
 import * as h from 'object-hash';
 
 describe('ChronoTree Simulation', () => {
-    it.only('should process 100 random operations, merging every iteration', () => {
+    it('should process 100 random operations, merging every iteration', () => {
         let r: RNG = new RNG(1);
 
         // create the first post
