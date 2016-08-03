@@ -4,23 +4,23 @@ import * as h from 'object-hash';
 export class TestStorage implements Storage {
     private _knownNodes: Node[] = [];
 
-    public save(node: TestNode): Hash {
+    public save(node: TestNode, name: string): Hash {
         // clear the node hash, so it isn't included in the new hash
         node.hash = '';
         let hash: string = this.computeHash(node);
-        console.log('Saving   ' + hash);
+        console.log(name + ' Saving   ' + hash);
 
         this._knownNodes.push(node);
         return hash;
     }
 
-    public delete(node: Hash): void {
+    public delete(node: Hash, name: string): void {
         // deleting from storage doesn't make a node unknown
-        console.log('Deleting ' + node);
+        console.log(name + ' Deleting ' + node);
     }
 
-    public find(hash: Hash): Node {
-        console.log('Finding  ' + hash);
+    public find(hash: Hash, name: string): Node {
+        console.log(name + ' Finding  ' + hash);
         for (let node of this._knownNodes) {
             if (node.hash === hash) {
                 return node;

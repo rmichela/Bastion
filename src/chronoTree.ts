@@ -40,11 +40,11 @@ export type TotalOrder = Node[];
 // abstracts the underlying complexities of storing nodes.
 export interface Storage {
     // persist a Node, generating it's persistence-specific hash
-    save(node: Node): Hash;
+    save(node: Node, treeName?: string): Hash;
     // destroy a Node
-    delete(node: Hash): void;
+    delete(node: Hash, treeName?: string): void;
     // find a Node by its hash
-    find(hash: Hash): Node;
+    find(hash: Hash, treeName?: string): Node;
 }
 
 // abstracts the details of implementing a total order w/r/t the node type
@@ -54,23 +54,32 @@ export interface TotalOrdering {
 
 // the ChronoTree itself
 export class ChronoTree {
+    private _name: string;
     private _storage: Storage;
     private _bitterEnd: Hash;
     private _knownNodes: Collections.Dictionary<Hash, Node> = new Collections.Dictionary<Hash, Node>();
     private _looseEnds: Collections.Set<Hash> = new Collections.Set<Hash>();
 
-    constructor(storage: Storage, head?: Hash) {
+    constructor(storage: Storage, head?: Hash, name?: string) {
         this._storage = storage;
+        this._name = name;
 
         if (!head) {
             // populate an empty tree with an empty aggregate node
             let emptyTreeNode: Node = new BitterEndNode();
-            emptyTreeNode.hash = this._storage.save(emptyTreeNode);
+            emptyTreeNode.hash = this._storage.save(emptyTreeNode, this._name);
             head = emptyTreeNode.hash;
         }
         this._bitterEnd = head;
 
         this.mergeImpl(head, true);
+    }
+
+    /**
+     * Get the name of this ChronoTree.
+     */
+    public get name(): string {
+        return this._name;
     }
 
     /**
@@ -162,6 +171,11 @@ export class ChronoTree {
         return null;
     }
 
+    public print(): void {
+        console.log('Bitter end: ' + this.bitterEnd);
+        console.log('Loose ends: ' + this.looseEnds);
+    }
+
     private mergeImpl(other: Hash, initializing: boolean): void {
         // todo: 1. any kind of validation of each of the nodes being merged
         //       2. make this method atomic
@@ -179,7 +193,7 @@ export class ChronoTree {
 
             // process this node only if it hasn't been seen before
             if (!this._knownNodes.containsKey(hash)) {
-                let node: Node = this._storage.find(hash);
+                let node: Node = this._storage.find(hash, this._name);
                 this._knownNodes.setValue(hash, node);
 
                 // assume this node is a loose end, for now
@@ -211,8 +225,14 @@ export class ChronoTree {
             }
         } else {
             // replace the bitter end with a new aggregate node
-            let newBitterEndNode: Node = new BitterEndNode();
-            newBitterEndNode.predecessors = this._looseEnds.toArray().sort();
+            let newBitterEndNode: Node;
+            if (this._looseEnds.size() === 1) {
+                newBitterEndNode = this._storage.find(this._looseEnds.toArray()[0], this._name);
+            } else {
+                newBitterEndNode = new BitterEndNode();
+                newBitterEndNode.predecessors = this._looseEnds.toArray().sort();
+            }
+
             this.replaceBitterEnd(newBitterEndNode);
             this._knownNodes.setValue(newBitterEndNode.hash, newBitterEndNode);
         }
@@ -220,14 +240,14 @@ export class ChronoTree {
 
     private replaceBitterEnd(newBitterEndNode: Node): void {
         // replace the current bitter end hash with the new bitter end hash
-        newBitterEndNode.hash = this._storage.save(newBitterEndNode);
+        newBitterEndNode.hash = this._storage.save(newBitterEndNode, this._name);
         let oldBitterEnd: Hash = this._bitterEnd;
         this._bitterEnd = newBitterEndNode.hash;
 
         let oldBitterEndNode: Node = this.getNode(oldBitterEnd);
         if (oldBitterEndNode.type === NodeType.Aggregate) {
             // purge the obsolete aggregate node
-            this._storage.delete(oldBitterEnd);
+            this._storage.delete(oldBitterEnd, this._name);
             this._knownNodes.remove(oldBitterEnd);
         }
         if (newBitterEndNode.type === NodeType.Content) {

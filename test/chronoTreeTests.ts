@@ -73,7 +73,7 @@ describe('ChronoTree', () => {
         it('should merge a simple split', () => {
             // create the root node
             let firstNode: TestNode = new TestNode();
-            firstNode.content = 'First post!';
+            firstNode.content = 'xxx';
             firstNode.hash = _storage.save(firstNode);
 
             // create the two divergent trees
@@ -82,12 +82,12 @@ describe('ChronoTree', () => {
 
             // add divergent nodes
             let lhsNode: TestNode = new TestNode();
-            lhsNode.content = 'lhs';
+            lhsNode.content = 'aaa';
             lhsNode.parent = firstNode.hash;
             lhsTree.add(lhsNode);
 
             let rhsNode: TestNode = new TestNode();
-            rhsNode.content = 'rhs';
+            rhsNode.content = 'bbb';
             rhsNode.parent = firstNode.hash;
             rhsTree.add(rhsNode);
 
@@ -102,7 +102,7 @@ describe('ChronoTree', () => {
             expect(mergeNode.predecessors).to.contain(rhsNode.hash);
         });
 
-        it('should be idempotent', () => {
+        it('should be commutative', () => {
             // create the root node
             let firstNode: TestNode = new TestNode();
             firstNode.content = 'xxx';
@@ -118,16 +118,21 @@ describe('ChronoTree', () => {
             aNode.parent = firstNode.hash;
             aTree.add(aNode);
 
-            // merge a->b twice
-            bTree.merge(aTree.bitterEnd);
-            let h1: Hash = bTree.bitterEnd;
-            // expect(h1).to.equal(aTree.bitterEnd);
-            bTree.merge(aTree.bitterEnd);
-            let h2: Hash = bTree.bitterEnd;
-            expect(h2).to.equal(h1);
+            let bNode: TestNode = new TestNode();
+            bNode.content = 'bbb';
+            bNode.parent = firstNode.hash;
+            bTree.add(bNode);
+
+            // merge the trees together
+            console.log('*** a -> b');
+            aTree.merge(bNode.hash);
+            console.log('*** b -> a');
+            bTree.merge(aNode.hash);
+
+            ctCompare(aTree, bTree);
         });
 
-        it('should merge a simple three way split', () => {
+        it('should be associative', () => {
             // create the root node
             let firstNode: TestNode = new TestNode();
             firstNode.content = 'xxx';
@@ -159,22 +164,135 @@ describe('ChronoTree', () => {
             let bHash: Hash = bTree.bitterEnd;
             let cHash: Hash = cTree.bitterEnd;
 
-            console.log('*** a + b + c');
+            console.log('*** (a -> b) -> c');
             aTree.merge(bHash).merge(cHash);
-            console.log('*** b + a + c');
-            bTree.merge(aHash).merge(cHash);
-            console.log('*** c + b + a');
-            cTree.merge(bHash).merge(aHash);
+            console.log('*** a -> (b -> c)');
+            bTree.merge(cHash).merge(aHash);
+            console.log('*** (c -> a) -> b');
+            cTree.merge(aHash).merge(bHash);
 
-            // verify ends are the same
-            expect(aTree.bitterEnd).to.equal(bTree.bitterEnd);
-            expect(bTree.bitterEnd).to.equal(cTree.bitterEnd);
-            // verify internal state is the same
-            expect(h.sha1(aTree.looseEnds)).to.equal(h.sha1(bTree.looseEnds));
-            expect(h.sha1(aTree.knownNodes)).to.equal(h.sha1(bTree.knownNodes));
-            expect(h.sha1(bTree.looseEnds)).to.equal(h.sha1(cTree.looseEnds));
-            expect(h.sha1(bTree.knownNodes)).to.equal(h.sha1(cTree.knownNodes));
+            ctCompare(aTree, bTree);
+            ctCompare(bTree, cTree);
+            ctCompare(cTree, aTree);
+        });
+
+        it('should be idempotent', () => {
+            // create the root node
+            let firstNode: TestNode = new TestNode();
+            firstNode.content = 'xxx';
+            firstNode.hash = _storage.save(firstNode);
+
+            // create the two divergent trees
+            let aTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+            let bTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+
+            // add divergent nodes
+            let aNode: TestNode = new TestNode();
+            aNode.content = 'aaa';
+            aNode.parent = firstNode.hash;
+            aTree.add(aNode);
+
+            // merge a->b twice
+            console.log('a->b');
+            bTree.merge(aTree.bitterEnd);
+            let h1: Hash = bTree.bitterEnd;
+            console.log('a->b');
+            bTree.merge(aTree.bitterEnd);
+            let h2: Hash = bTree.bitterEnd;
+            expect(h2).to.equal(h1);
+
+            console.log('b->a');
+            aTree.merge(bTree.bitterEnd);
+            console.log('a->b');
+            bTree.merge(aTree.bitterEnd);
+            ctCompare(aTree, bTree);
+        });
+
+        it('should merge multiple generations', () => {
+            // create the root node
+            let firstNode: TestNode = new TestNode();
+            firstNode.content = 'xxx';
+            firstNode.hash = _storage.save(firstNode);
+
+            // create the three divergent trees
+            let aTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+            let bTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+            let cTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+
+            // add divergent nodes
+            console.log('*** creating a,b,c nodes');
+            let aNode: TestNode = new TestNode();
+            aNode.content = 'aaa';
+            aNode.parent = firstNode.hash;
+            aTree.add(aNode);
+
+            let bNode: TestNode = new TestNode();
+            bNode.content = 'bbb';
+            bNode.parent = firstNode.hash;
+            bTree.add(bNode);
+
+            let cNode: TestNode = new TestNode();
+            cNode.content = 'ccc';
+            cNode.parent = firstNode.hash;
+            cTree.add(cNode);
+
+            // merge the trees together
+            let aHash: Hash = aTree.bitterEnd;
+            let bHash: Hash = bTree.bitterEnd;
+            let cHash: Hash = cTree.bitterEnd;
+
+            console.log('*** (a -> b) -> c');
+            aTree.merge(bHash).merge(cHash);
+            console.log('*** a -> (b -> c)');
+            bTree.merge(cHash).merge(aHash);
+            console.log('*** (c -> a) -> b');
+            cTree.merge(aHash).merge(bHash);
+
+            // add divergent nodes
+            console.log('*** creating p,q,r nodes');
+            let pNode: TestNode = new TestNode();
+            pNode.content = 'ppp';
+            pNode.parent = firstNode.hash;
+            aTree.add(pNode);
+
+            let qNode: TestNode = new TestNode();
+            qNode.content = 'qqq';
+            qNode.parent = firstNode.hash;
+            bTree.add(qNode);
+
+            let rNode: TestNode = new TestNode();
+            rNode.content = 'rrr';
+            rNode.parent = firstNode.hash;
+            cTree.add(rNode);
+
+            // merge the trees together
+            aHash = aTree.bitterEnd;
+            bHash = bTree.bitterEnd;
+            cHash = cTree.bitterEnd;
+
+            console.log('*** (a -> b) -> c');
+            aTree.merge(bHash).merge(cHash);
+            console.log('*** a -> (b -> c)');
+            bTree.merge(cHash).merge(aHash);
+            console.log('*** (c -> a) -> b');
+            cTree.merge(aHash).merge(bHash);
+
+            ctCompare(aTree, bTree);
+            ctCompare(bTree, cTree);
+            ctCompare(cTree, aTree);
+
+            aTree.print();
+            bTree.print();
+            cTree.print();
         });
     });
 });
+
+function ctCompare(lhs: ChronoTree, rhs: ChronoTree) {
+    // verify ends are the same
+    expect(lhs.bitterEnd).to.equal(rhs.bitterEnd);
+    // verify internal state is the same
+    expect(h.sha1(lhs.looseEnds)).to.equal(h.sha1(rhs.looseEnds));
+    expect(h.sha1(lhs.knownNodes)).to.equal(h.sha1(rhs.knownNodes));
+}
 
