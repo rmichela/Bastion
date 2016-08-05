@@ -12,20 +12,42 @@ describe('ChronoTree', () => {
 
     describe('#constructor', () => {
         it('should initialize an empty tree with an empty aggregate node', () => {
-            let tree: ChronoTree = new ChronoTree(_storage);
+            let tree: ChronoTree = new ChronoTree(_storage, undefined, 'A');
             let bitterEnd: Node = tree.getNode(tree.bitterEnd);
 
             expect(bitterEnd.type).to.equal(NodeType.Aggregate);
         });
 
-        it('should initialize a tree with a provided first node', () => {
+        it('should initialize a tree with a provided first content node', () => {
             let firstNode: TestNode = new TestNode();
             firstNode.content = 'First post!';
             firstNode.hash = _storage.save(firstNode);
 
-            let tree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+            let tree: ChronoTree = new ChronoTree(_storage, firstNode.hash, 'A');
 
-            expect(tree.bitterEnd).to.equal(firstNode.hash);
+            // bitter end should be an aggregate that points to the provided node
+            let bitterEnd: Node = tree.getNode(tree.bitterEnd);
+            expect(bitterEnd.type).to.equal(NodeType.Aggregate);
+            expect(bitterEnd.predecessors[0]).to.equal(firstNode.hash);
+        });
+
+        it('should initialize a tree with a provided first aggregate node', () => {
+            let firstNode: TestNode = new TestNode();
+            firstNode.content = 'First post!';
+            firstNode.hash = _storage.save(firstNode);
+
+            let aggregate: TestNode = new TestNode();
+            aggregate.predecessors.push(firstNode.hash);
+            aggregate.type = NodeType.Aggregate;
+            aggregate.content = undefined;
+            aggregate.hash = _storage.save(aggregate);
+
+            let tree: ChronoTree = new ChronoTree(_storage, aggregate.hash, 'A');
+
+            // bitter end should be an aggregate that points to the provided node
+            let bitterEnd: Node = tree.getNode(tree.bitterEnd);
+            expect(bitterEnd.type).to.equal(NodeType.Aggregate);
+            expect(bitterEnd.predecessors[0]).to.equal(firstNode.hash);
         });
     });
 
@@ -39,14 +61,14 @@ describe('ChronoTree', () => {
 
             expect(firstNode.hash).to.not.equal(Node.HASH_NOT_SET);
             expect(firstNode.hash).to.not.equal('');
-            expect(firstNode.predecessors.length).to.equal(0);
             expect(firstNode.parent).to.equal(Node.HASH_NOT_SET);
+            expect(firstNode.predecessors.length).to.equal(0);
 
-            expect(tree.getNode(tree.bitterEnd).type).to.equal(NodeType.Content);
-
-            expect(tree.bitterEnd).to.equal(firstNode.hash);
-            expect(tree.looseEnds.length).to.equal(1);
-            expect(Object.keys(tree.knownNodes).length).to.equal(1);
+            expect(tree.getNode(tree.bitterEnd).type).to.equal(NodeType.Aggregate);
+            expect(tree.getNode(tree.bitterEnd).predecessors[0]).to.equal(firstNode.hash);
+            expect(tree.getNode(tree.bitterEnd).predecessors.length).to.equal(1);
+            expect(tree.looseEnds.length).to.equal(1); // first node
+            expect(Object.keys(tree.knownNodes).length).to.equal(2); // first node and aggreate node
         });
 
         it('should accept another node', () => {
@@ -61,11 +83,11 @@ describe('ChronoTree', () => {
             secondNode.parent = firstNode.hash;
             tree.add(secondNode);
 
-            expect(tree.bitterEnd).to.equal(secondNode.hash);
+            expect(tree.getNode(tree.bitterEnd).predecessors[0]).to.equal(secondNode.hash);
+            expect(tree.getNode(tree.bitterEnd).predecessors.length).to.equal(1);
             expect(tree.looseEnds.length).to.equal(1);
-            expect(tree.getNode(tree.bitterEnd).type).to.equal(NodeType.Content);
-            expect(tree.getNode(tree.bitterEnd).parent).to.equal(firstNode.hash);
-            expect(Object.keys(tree.knownNodes).length).to.equal(2);
+            expect(tree.getNode(tree.bitterEnd).type).to.equal(NodeType.Aggregate);
+            expect(Object.keys(tree.knownNodes).length).to.equal(3); // first, second, aggregate
         });
     });
 
@@ -109,8 +131,8 @@ describe('ChronoTree', () => {
             firstNode.hash = _storage.save(firstNode);
 
             // create the two divergent trees
-            let aTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
-            let bTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+            let aTree: ChronoTree = new ChronoTree(_storage, firstNode.hash, 'A');
+            let bTree: ChronoTree = new ChronoTree(_storage, firstNode.hash, 'B');
 
             // add divergent nodes
             let aNode: TestNode = new TestNode();
@@ -123,11 +145,14 @@ describe('ChronoTree', () => {
             bNode.parent = firstNode.hash;
             bTree.add(bNode);
 
+            let aHash: Hash = aTree.bitterEnd;
+            let bHash: Hash = bTree.bitterEnd;
+
             // merge the trees together
             console.log('*** a -> b');
-            aTree.merge(bNode.hash);
+            aTree.merge(bHash);
             console.log('*** b -> a');
-            bTree.merge(aNode.hash);
+            bTree.merge(aHash);
 
             ctCompare(aTree, bTree);
         });
@@ -183,8 +208,8 @@ describe('ChronoTree', () => {
             firstNode.hash = _storage.save(firstNode);
 
             // create the two divergent trees
-            let aTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
-            let bTree: ChronoTree = new ChronoTree(_storage, firstNode.hash);
+            let aTree: ChronoTree = new ChronoTree(_storage, firstNode.hash, 'A');
+            let bTree: ChronoTree = new ChronoTree(_storage, firstNode.hash, 'B');
 
             // add divergent nodes
             let aNode: TestNode = new TestNode();
@@ -192,18 +217,18 @@ describe('ChronoTree', () => {
             aNode.parent = firstNode.hash;
             aTree.add(aNode);
 
-            // merge a->b twice
-            console.log('a->b');
+            // merge b<-a twice
+            console.log('b<-a');
             bTree.merge(aTree.bitterEnd);
             let h1: Hash = bTree.bitterEnd;
-            console.log('a->b');
+            console.log('b<-a');
             bTree.merge(aTree.bitterEnd);
             let h2: Hash = bTree.bitterEnd;
             expect(h2).to.equal(h1);
 
-            console.log('b->a');
+            console.log('a<-b');
             aTree.merge(bTree.bitterEnd);
-            console.log('a->b');
+            console.log('b<-a');
             bTree.merge(aTree.bitterEnd);
             ctCompare(aTree, bTree);
         });

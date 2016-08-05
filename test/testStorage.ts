@@ -5,6 +5,8 @@ export class TestStorage implements Storage {
     private _knownNodes: Node[] = [];
 
     public save(node: TestNode, name: string): Hash {
+        name = name || '';
+
         // clear the node hash, so it isn't included in the new hash
         node.hash = '';
         let hash: string = this.computeHash(node);
@@ -15,11 +17,15 @@ export class TestStorage implements Storage {
     }
 
     public delete(node: Hash, name: string): void {
+        name = name || '';
+
         // deleting from storage doesn't make a node unknown
         console.log(name + ' Deleting ' + node);
     }
 
     public find(hash: Hash, name: string): Node {
+        name = name || '';
+
         console.log(name + ' Finding  ' + hash);
         for (let node of this._knownNodes) {
             if (node.hash === hash) {

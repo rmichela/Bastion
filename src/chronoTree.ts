@@ -62,7 +62,7 @@ export class ChronoTree {
 
     constructor(storage: Storage, head?: Hash, name?: string) {
         this._storage = storage;
-        this._name = name;
+        this._name = name || '';
 
         if (!head) {
             // populate an empty tree with an empty aggregate node
@@ -70,7 +70,6 @@ export class ChronoTree {
             emptyTreeNode.hash = this._storage.save(emptyTreeNode, this._name);
             head = emptyTreeNode.hash;
         }
-        this._bitterEnd = head;
 
         this.init(head);
     }
@@ -150,15 +149,20 @@ export class ChronoTree {
      */
     public merge(other: Hash): ChronoTree {
         let otherNode: Node = this._storage.find(other, this._name);
+        if (otherNode.type !== NodeType.Aggregate) {
+            throw new Error('ChronoTree.merge can only merge aggregate nodes');
+        }
+
         // update known nodes
         this.traverseUnknownNodes(otherNode).toArray().forEach(n => {
-            this._knownNodes.setValue(n.hash, n);
+            if (n.type !== NodeType.Aggregate) {
+                this._knownNodes.setValue(n.hash, n);
+            }
         });
         // update loose ends
-        this._looseEnds.add(other);
-        this._looseEnds.remove(otherNode.parent);
+        otherNode.predecessors.forEach(h => this._looseEnds.add(h));
         // update bitter end
-        let be: BitterEndNode = new BitterEndNode(this._looseEnds.toArray());
+        let be: BitterEndNode = new BitterEndNode(this._looseEnds.toArray().sort());
         this.replaceBitterEnd(be);
 
         return this;
@@ -172,13 +176,27 @@ export class ChronoTree {
         return null;
     }
 
+    /**
+     * Creates a clone of this ChronoTree.
+     */
+    public clone(name?: string): ChronoTree {
+        let cloneTree: ChronoTree = new ChronoTree(this._storage);
+        cloneTree._knownNodes.clear();
+        this._knownNodes.forEach((k, v) => cloneTree._knownNodes.setValue(k, v));
+        cloneTree._looseEnds.clear();
+        this._looseEnds.forEach(h => cloneTree._looseEnds.add(h));
+        cloneTree._bitterEnd = this._bitterEnd;
+        cloneTree._name = name || this._name;
+        return cloneTree;
+    }
+
     public print(): void {
         console.log('Bitter end: ' + this.bitterEnd);
         console.log('Loose ends: ' + this.looseEnds);
     }
 
     private init(other: Hash): void {
-        let otherNode: Node = this._storage.find(other);
+        let otherNode: Node = this._storage.find(other, this._name);
         // initialize know nodes
         this.traverseUnknownNodes(otherNode).toArray().forEach(n => {
             this._knownNodes.setValue(n.hash, n);
@@ -198,20 +216,29 @@ export class ChronoTree {
 
     private traverseUnknownNodes(node: Node): Collections.Set<Node> {
         let nodes: Collections.Set<Node> = new Collections.Set<Node>(n => n.hash);
+        let todo: Collections.Queue<Node> = new Collections.Queue<Node>();
 
-        // only travers unknown nodes
-        if (!this._knownNodes.containsKey(node.hash)) {
-            // include this node
-            nodes.add(node);
-            // include this node's parent and descendents
-            if (node.parent !== Node.HASH_NOT_SET) {
-                let parentNode: Node = this._storage.find(node.parent, this._name);
-                nodes.union(this.traverseUnknownNodes(parentNode));
-            }
-            // include this node's predacessors and descendents
-            for (let pHash of node.predecessors) {
-                let p: Node = this._storage.find(pHash, this._name);
-                nodes.union(this.traverseUnknownNodes(p));
+        todo.enqueue(node);
+        while (!todo.isEmpty()) {
+            node = todo.dequeue();
+            // only travers unknown nodes
+            if (!this._knownNodes.containsKey(node.hash)) {
+                // include this node
+                nodes.add(node);
+                // include this node's parent and descendents
+                if (node.parent !== Node.HASH_NOT_SET) {
+                    if (!this._knownNodes.containsKey(node.parent)) {
+                        let parentNode: Node = this._storage.find(node.parent, this._name);
+                        todo.enqueue(parentNode);
+                    }
+                }
+                // include this node's predacessors and descendents
+                for (let pHash of node.predecessors) {
+                    if (!this._knownNodes.containsKey(pHash)) {
+                        let p: Node = this._storage.find(pHash, this._name);
+                        todo.enqueue(p);
+                    }
+                }
             }
         }
 
