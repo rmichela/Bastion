@@ -9,7 +9,7 @@ describe('ChronoTree Simulation', () => {
         let r: RNG = new RNG(1);
 
         // create the first post
-        let storage: Storage = new TestStorage();
+        let storage: Storage = new TestStorage(false);
         let rootNode: TestNode = new TestNode();
         rootNode.content = '-1';
         rootNode.hash = storage.save(rootNode);
@@ -87,10 +87,19 @@ function contentHashes(nodeMap: NodeMap): Hash[] {
     return ret;
 }
 
-function ctCompare(lhs: ChronoTree, rhs: ChronoTree) {
+function ctCompare(lhs: ChronoTree, rhs: ChronoTree): void {
     // verify ends are the same
     expect(lhs.bitterEnd).to.equal(rhs.bitterEnd);
     // verify internal state is the same
     expect(h.sha1(lhs.looseEnds)).to.equal(h.sha1(rhs.looseEnds));
+
+    if (h.sha1(lhs.knownNodes) !== h.sha1(rhs.knownNodes)) {
+        console.log('============================');
+        lhs.debugPrint();
+        console.log('============================');
+        rhs.debugPrint();
+        console.log('============================');
+    }
+
     expect(h.sha1(lhs.knownNodes)).to.equal(h.sha1(rhs.knownNodes));
 }

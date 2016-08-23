@@ -129,6 +129,14 @@ export class ChronoTree {
      * Add a new node to this ChronoTree.
      */
     public add(newNode: Node): ChronoTree {
+        let parentNode: Node = this._storage.find(newNode.parent);
+        if (!parentNode) {
+            throw new Error('Parent node ' + newNode.parent + ' is not known');
+        }
+        if (parentNode.type !== NodeType.Content) {
+            throw new Error('Parent node must be a content node');
+        }
+
         // store the new node
         let newHash: Hash = this._storage.save(newNode, this._name);
         newNode.hash = newHash;
@@ -190,9 +198,13 @@ export class ChronoTree {
         return cloneTree;
     }
 
-    public print(): void {
-        console.log('Bitter end: ' + this.bitterEnd);
-        console.log('Loose ends: ' + this.looseEnds);
+    public debugPrint(): void {
+        if (this.name) {
+            console.log('Name:        ' + this.name);
+        }
+        console.log('Bitter end:  ' + this.bitterEnd);
+        console.log('Loose ends:  ' + this.looseEnds);
+        console.log('Known nodes: ' + this._knownNodes.keys());
     }
 
     private init(other: Hash): void {
@@ -246,10 +258,16 @@ export class ChronoTree {
     }
 
     private replaceBitterEnd(newBitterEndNode: Node): void {
+        let oldBitterEnd: Hash = this._bitterEnd;
         // replace the current bitter end hash with the new bitter end hash
         newBitterEndNode.hash = this._storage.save(newBitterEndNode, this._name);
+
+        // if attempting to replace the bitter end with an equivelent node, skip
+        if (newBitterEndNode.hash === oldBitterEnd) {
+            return;
+        }
+
         this._knownNodes.setValue(newBitterEndNode.hash, newBitterEndNode);
-        let oldBitterEnd: Hash = this._bitterEnd;
         this._bitterEnd = newBitterEndNode.hash;
 
         // purge the obsolete aggregate node, if it exists

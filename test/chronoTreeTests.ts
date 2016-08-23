@@ -7,7 +7,7 @@ describe('ChronoTree', () => {
     let _storage: Storage;
 
     beforeEach(() => {
-        _storage = new TestStorage();
+        _storage = new TestStorage(true);
     });
 
     describe('#constructor', () => {
@@ -306,14 +306,14 @@ describe('ChronoTree', () => {
             ctCompare(bTree, cTree);
             ctCompare(cTree, aTree);
 
-            aTree.print();
-            bTree.print();
-            cTree.print();
+            aTree.debugPrint();
+            bTree.debugPrint();
+            cTree.debugPrint();
         });
     });
 });
 
-function ctCompare(lhs: ChronoTree, rhs: ChronoTree) {
+function ctCompare(lhs: ChronoTree, rhs: ChronoTree): void {
     // verify ends are the same
     expect(lhs.bitterEnd).to.equal(rhs.bitterEnd);
     // verify internal state is the same

@@ -3,6 +3,11 @@ import * as h from 'object-hash';
 
 export class TestStorage implements Storage {
     private _knownNodes: Node[] = [];
+    private _verbose: boolean;
+
+    constructor(verbose: boolean) {
+        this._verbose = verbose;
+    }
 
     public save(node: TestNode, name: string): Hash {
         name = name || '';
@@ -10,7 +15,9 @@ export class TestStorage implements Storage {
         // clear the node hash, so it isn't included in the new hash
         node.hash = '';
         let hash: string = this.computeHash(node);
-        console.log(name + ' Saving   ' + hash);
+
+        if (this._verbose)
+            console.log(name + ' Saving   ' + hash);
 
         this._knownNodes.push(node);
         return hash;
@@ -20,13 +27,16 @@ export class TestStorage implements Storage {
         name = name || '';
 
         // deleting from storage doesn't make a node unknown
-        console.log(name + ' Deleting ' + node);
+        if (this._verbose)
+            console.log(name + ' Deleting ' + node);
     }
 
     public find(hash: Hash, name: string): Node {
         name = name || '';
 
-        console.log(name + ' Finding  ' + hash);
+        if (this._verbose)
+            console.log(name + ' Finding  ' + hash);
+
         for (let node of this._knownNodes) {
             if (node.hash === hash) {
                 return node;
@@ -38,18 +48,20 @@ export class TestStorage implements Storage {
 
     private computeHash(node: TestNode): string {
         let hash = h.sha1(node).substr(0, 6);
-        if (node.parent !== Node.HASH_NOT_SET) {
-            hash += (' => ' + node.parent.substr(0, 6));
-        }
-        if (node.predecessors.length > 0) {
-            hash += ' [ ';
-            for (let p of node.predecessors) {
-                hash += (p.substr(0, 6) + ' ');
+        if (this._verbose) {
+            if (node.parent !== Node.HASH_NOT_SET) {
+                hash += (' => ' + node.parent.substr(0, 6));
             }
-            hash += ']';
-        }
-        if (node.content) {
-            hash += (' "' + node.content + '"');
+            if (node.predecessors.length > 0) {
+                hash += ' [ ';
+                for (let p of node.predecessors) {
+                    hash += (p.substr(0, 6) + ' ');
+                }
+                hash += ']';
+            }
+            if (node.content) {
+                hash += (' "' + node.content + '"');
+            }
         }
         return hash;
     }
