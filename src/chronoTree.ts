@@ -129,14 +129,6 @@ export class ChronoTree {
      * Add a new node to this ChronoTree.
      */
     public add(newNode: Node): ChronoTree {
-        let parentNode: Node = this._storage.find(newNode.parent);
-        if (!parentNode) {
-            throw new Error('Parent node ' + newNode.parent + ' is not known');
-        }
-        if (parentNode.type !== NodeType.Content) {
-            throw new Error('Parent node must be a content node');
-        }
-
         // store the new node
         let newHash: Hash = this._storage.save(newNode, this._name);
         newNode.hash = newHash;

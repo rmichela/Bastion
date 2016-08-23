@@ -33,6 +33,7 @@
     "lint": "tslint 'src/**/*.ts'",
     "pretest": "npm run clean && npm run tsc",
     "test": "mocha bin/test/**/*.js",
+    "test:break": "mocha bin/test/**/*.js --debug-brk",
     "prebuild": "npm run clean",
     "build": "npm run tsc",
     "typings:install": "typings install"

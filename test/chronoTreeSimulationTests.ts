@@ -5,7 +5,7 @@ import { RNG } from './rng';
 import * as h from 'object-hash';
 
 describe('ChronoTree Simulation', () => {
-    it.only('should process 100 random operations, merging every iteration', () => {
+    it('should process 100 random operations, merging every iteration', () => {
         let r: RNG = new RNG(1);
 
         // create the first post
@@ -21,7 +21,7 @@ describe('ChronoTree Simulation', () => {
             new ChronoTree(storage, rootNode.hash, 'C')
             ];
 
-        for (let i: number = 0; i < 100; i++) { // one hundred times
+        function tick(i:number, trees: ChronoTree[], r: RNG) {
             console.log('*** Iteration: ' + i.toString() + ' ***');
             for (let t: number = 0; t < trees.length; t++) {
                 // pick a random known node to be the parent
@@ -36,7 +36,6 @@ describe('ChronoTree Simulation', () => {
 
             // merge each pair of trees together
             for (let treePair of combineAll(trees)) {
-                console.log('[ ' + treePair[0].name + '<-' + treePair[1].name + ' ]');
                 treePair[0].merge(treePair[1].bitterEnd);
             }
 
@@ -44,7 +43,13 @@ describe('ChronoTree Simulation', () => {
             for (let treePair of combine(trees)) {
                 ctCompare(treePair[0], treePair[1]);
             }
+
+            if (i > 0) {
+                process.nextTick(function(): void {tick(--i, trees, r); });
+            }
         }
+
+        process.nextTick(function(): void {tick(100, trees, r); });
     });
 });
 
