@@ -47,8 +47,8 @@ export class TestStorage implements Storage {
     }
 
     private computeHash(node: TestNode): string {
-        let hash = h.sha1(node).substr(0, 6);
         if (this._verbose) {
+            let hash = h.sha1(node).substr(0, 6);
             if (node.parent !== Node.HASH_NOT_SET) {
                 hash += (' => ' + node.parent.substr(0, 6));
             }
@@ -62,8 +62,10 @@ export class TestStorage implements Storage {
             if (node.content) {
                 hash += (' "' + node.content + '"');
             }
+            return hash;
+        } else {
+            return h.sha1(node);
         }
-        return hash;
     }
 }
 
